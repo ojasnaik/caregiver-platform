@@ -1,0 +1,143 @@
+.admin-requests-section {
+  margin-top: 20px;
+  padding: 20px;
+  background: #f9f9f9;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+}
+
+.admin-requests-section h3 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  color: #333;
+}
+
+.admin-requests-loading {
+  padding: 20px;
+  text-align: center;
+  color: #666;
+}
+
+.no-pending-requests {
+  color: #666;
+  font-style: italic;
+  text-align: center;
+  padding: 20px;
+}
+
+.pending-requests-list {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.pending-request-item {
+  background: white;
+  padding: 20px;
+  border-radius: 6px;
+  border: 1px solid #e0e0e0;
+  border-left: 4px solid #FFC107;
+  transition: box-shadow 0.2s;
+}
+
+.pending-request-item:hover {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.pending-request-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 10px;
+}
+
+.pending-request-header h4 {
+  margin: 0 0 5px 0;
+  color: #333;
+  font-size: 16px;
+}
+
+.request-author {
+  margin: 0;
+  color: #666;
+  font-size: 13px;
+  font-style: italic;
+}
+
+.pending-badge {
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  background-color: #fff9c4;
+  color: #FFC107;
+  border: 1px solid #FFC107;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+.pending-request-description {
+  color: #666;
+  margin: 10px 0;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.pending-request-meta {
+  display: flex;
+  gap: 15px;
+  font-size: 12px;
+  color: #999;
+  margin-top: 10px;
+  margin-bottom: 15px;
+}
+
+.pending-request-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 15px;
+}
+
+.approve-btn {
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background-color 0.3s;
+}
+
+.approve-btn:hover:not(:disabled) {
+  background-color: #45a049;
+}
+
+.approve-btn:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
+.reject-btn {
+  background-color: #f44336;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background-color 0.3s;
+}
+
+.reject-btn:hover:not(:disabled) {
+  background-color: #da190b;
+}
+
+.reject-btn:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
