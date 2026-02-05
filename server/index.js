@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 import authRoutes from './routes/auth.js';
 import discussionRoutes from './routes/discussions.js';
 import resourceRoutes from './routes/resources.js';
+import chatRoutes from './routes/chat.js';
 
 dotenv.config();
 
@@ -19,6 +20,7 @@ app.use(express.json());
 app.use('/api/auth', authRoutes);
 app.use('/api/discussions', discussionRoutes);
 app.use('/api/resources', resourceRoutes);
+app.use('/api/chat', chatRoutes);
 
 // MongoDB connection
 const connectDB = async () => {

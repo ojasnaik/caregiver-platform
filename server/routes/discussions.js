@@ -169,6 +169,10 @@ router.post('/topics/:topicId/posts', requireAuth, async (req, res) => {
       return res.status(404).json({ success: false, message: 'Topic not found' });
     }
 
+    console.log('[Create Post] Creating new post...');
+    console.log('[Create Post] Content length:', content.trim().length, 'characters');
+    console.log('[Create Post] Word count:', content.trim().split(/\s+/).filter(w => w.length > 0).length);
+    
     const post = new Post({
       content: content.trim(),
       author: req.userId,
@@ -177,12 +181,37 @@ router.post('/topics/:topicId/posts', requireAuth, async (req, res) => {
       topicName: topic.name
     });
 
+    console.log('[Create Post] Post object created, saving...');
     await post.save();
+    console.log('[Create Post] Post saved successfully, ID:', post._id);
     await post.populate('author', 'name alias');
     
     res.status(201).json({ success: true, post });
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Failed to create post' });
+    console.error('\n[Create Post] ========== ERROR ==========');
+    console.error('[Create Post] Error name:', error.name);
+    console.error('[Create Post] Error message:', error.message);
+    console.error('[Create Post] Error stack:', error.stack);
+    if (error.errors) {
+      console.error('[Create Post] Validation errors:', error.errors);
+    }
+    console.error('[Create Post] ===========================\n');
+    
+    // Handle validation errors
+    if (error.name === 'ValidationError') {
+      const errorMessages = Object.values(error.errors).map(err => err.message).join(', ');
+      return res.status(400).json({ 
+        success: false, 
+        message: errorMessages || 'Validation error' 
+      });
+    }
+    
+    // Handle other errors
+    res.status(500).json({ 
+      success: false, 
+      message: error.message || 'Failed to create post',
+      error: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 });
 
@@ -332,10 +361,10 @@ router.get('/topic-requests/my-requests', requireAuth, async (req, res) => {
   }
 });
 
-// Get pending topic requests (admin only)
+// Get pending topic requests (admin only) - includes both Pending and Edit_Requested
 router.get('/topic-requests/pending', requireAuth, requireAdmin, async (req, res) => {
   try {
-    const requests = await TopicRequest.find({ status: 'Pending' })
+    const requests = await TopicRequest.find({ status: { $in: ['Pending', 'Edit_Requested'] } })
       .populate('userId', 'name alias')
       .sort({ createdAt: -1 });
     
@@ -354,8 +383,8 @@ router.post('/topic-requests/:id/approve', requireAuth, requireAdmin, async (req
       return res.status(404).json({ success: false, message: 'Topic request not found' });
     }
 
-    if (topicRequest.status !== 'Pending') {
-      return res.status(400).json({ success: false, message: 'Topic request is not pending' });
+    if (topicRequest.status !== 'Pending' && topicRequest.status !== 'Edit_Requested') {
+      return res.status(400).json({ success: false, message: 'Topic request cannot be approved in its current status' });
     }
 
     // Check if topic with this name already exists
@@ -397,17 +426,19 @@ router.post('/topic-requests/:id/approve', requireAuth, requireAdmin, async (req
 // Reject a topic request (admin only)
 router.post('/topic-requests/:id/reject', requireAuth, requireAdmin, async (req, res) => {
   try {
+    const { reason } = req.body;
     const topicRequest = await TopicRequest.findById(req.params.id);
     
     if (!topicRequest) {
       return res.status(404).json({ success: false, message: 'Topic request not found' });
     }
 
-    if (topicRequest.status !== 'Pending') {
-      return res.status(400).json({ success: false, message: 'Topic request is not pending' });
+    if (topicRequest.status !== 'Pending' && topicRequest.status !== 'Edit_Requested') {
+      return res.status(400).json({ success: false, message: 'Topic request cannot be rejected in its current status' });
     }
 
     topicRequest.status = 'Rejected';
+    topicRequest.rejectionReason = reason?.trim() || '';
     topicRequest.reviewedBy = req.userId;
     topicRequest.reviewedAt = new Date();
     await topicRequest.save();
@@ -415,6 +446,91 @@ router.post('/topic-requests/:id/reject', requireAuth, requireAdmin, async (req,
     res.json({ success: true, topicRequest });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Failed to reject topic request' });
+  }
+});
+
+// Request edits for a topic request (admin only)
+router.post('/topic-requests/:id/request-edit', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { feedbackText } = req.body;
+    const topicRequest = await TopicRequest.findById(req.params.id);
+    
+    if (!topicRequest) {
+      return res.status(404).json({ success: false, message: 'Topic request not found' });
+    }
+
+    if (topicRequest.status !== 'Pending') {
+      return res.status(400).json({ success: false, message: 'Can only request edits for pending topic requests' });
+    }
+
+    if (!feedbackText || !feedbackText.trim()) {
+      return res.status(400).json({ success: false, message: 'Feedback text is required' });
+    }
+
+    topicRequest.status = 'Edit_Requested';
+    topicRequest.feedbackText = feedbackText.trim();
+    topicRequest.reviewedBy = req.userId;
+    topicRequest.reviewedAt = new Date();
+    await topicRequest.save();
+
+    res.json({ success: true, topicRequest });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Failed to request edits' });
+  }
+});
+
+// Update a topic request (non-admin users can update their own Edit_Requested requests)
+router.put('/topic-requests/:id', requireAuth, async (req, res) => {
+  try {
+    const { name, description } = req.body;
+    const topicRequest = await TopicRequest.findById(req.params.id);
+    
+    if (!topicRequest) {
+      return res.status(404).json({ success: false, message: 'Topic request not found' });
+    }
+
+    // Check if user owns this request
+    if (topicRequest.userId.toString() !== req.userId) {
+      return res.status(403).json({ success: false, message: 'You can only edit your own topic requests' });
+    }
+
+    // Only allow editing if status is Edit_Requested
+    if (topicRequest.status !== 'Edit_Requested') {
+      return res.status(400).json({ success: false, message: 'Topic request can only be edited when edit is requested' });
+    }
+
+    // Validate name
+    if (name && name.trim()) {
+      // Check if another topic or request with this name exists
+      const existingTopic = await Topic.findOne({ name: name.trim() });
+      if (existingTopic) {
+        return res.status(400).json({ success: false, message: 'Topic with this name already exists' });
+      }
+
+      const existingRequest = await TopicRequest.findOne({ 
+        name: name.trim(), 
+        _id: { $ne: req.params.id },
+        status: { $in: ['Pending', 'Edit_Requested'] }
+      });
+      if (existingRequest) {
+        return res.status(400).json({ success: false, message: 'Another pending request with this name already exists' });
+      }
+
+      topicRequest.name = name.trim();
+    }
+
+    if (description !== undefined) {
+      topicRequest.description = description?.trim() || '';
+    }
+
+    // Reset status to Pending after user makes edits
+    topicRequest.status = 'Pending';
+    topicRequest.feedbackText = undefined; // Clear feedback after edits
+    await topicRequest.save();
+
+    res.json({ success: true, topicRequest });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Failed to update topic request' });
   }
 });
 

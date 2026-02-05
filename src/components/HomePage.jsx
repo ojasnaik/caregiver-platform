@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import './HomePage.css';
 import Discussions from './Discussions';
 import Resources from './Resources';
+import SupportChat from './SupportChat';
 
 const HomePage = () => {
   const [user, setUser] = useState(null);
@@ -145,6 +146,12 @@ const HomePage = () => {
           >
             Resources
           </button>
+          <button
+            className={`tab-btn ${activeTab === 'support-chat' ? 'active' : ''}`}
+            onClick={() => setActiveTab('support-chat')}
+          >
+            Support Chat
+          </button>
         </div>
 
         {activeTab === 'home' && (
@@ -208,6 +215,9 @@ const HomePage = () => {
         )}
         {activeTab === 'resources' && (
           <Resources user={user} />
+        )}
+        {activeTab === 'support-chat' && (
+          <SupportChat user={user} />
         )}
       </main>
 

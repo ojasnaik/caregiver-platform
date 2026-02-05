@@ -14,7 +14,7 @@ const topicRequestSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['Pending', 'Approved', 'Rejected'],
+    enum: ['Pending', 'Approved', 'Rejected', 'Edit_Requested'],
     default: 'Pending'
   },
   userId: {
@@ -29,6 +29,16 @@ const topicRequestSchema = new mongoose.Schema({
   },
   reviewedAt: {
     type: Date
+  },
+  feedbackText: {
+    type: String,
+    trim: true,
+    maxlength: [500, 'Feedback text cannot exceed 500 characters']
+  },
+  rejectionReason: {
+    type: String,
+    trim: true,
+    maxlength: [500, 'Rejection reason cannot exceed 500 characters']
   },
   createdAt: {
     type: Date,

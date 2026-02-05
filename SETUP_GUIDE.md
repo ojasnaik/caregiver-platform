@@ -46,6 +46,10 @@ MONGODB_URI=mongodb+srv://<username>:<password>@<cluster-url>/caregiver-platform
 
 # Server Port (optional, defaults to 5000)
 PORT=5000
+
+# Google Gemini API Key for Support Chat
+# Get your API key from: https://makersuite.google.com/app/apikey
+GEMINI_API_KEY=YOUR_GEMINI_API_KEY_HERE
 ```
 
 **Important:** Replace `<username>`, `<password>`, and `<cluster-url>` with your actual MongoDB Atlas credentials.

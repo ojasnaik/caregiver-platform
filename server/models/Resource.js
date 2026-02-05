@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { generateEmbeddingFromFields } from '../utils/embeddings.js';
 
 const resourceSchema = new mongoose.Schema({
   title: {
@@ -28,8 +29,28 @@ const resourceSchema = new mongoose.Schema({
   isActive: {
     type: Boolean,
     default: true
+  },
+  embedding: {
+    type: [Number],
+    default: undefined
   }
 }, { timestamps: true });
+
+// Pre-save hook to generate embedding before saving
+resourceSchema.pre('save', async function(next) {
+  // Only generate embedding if it doesn't exist or if title/description changed
+  if (!this.embedding || this.isModified('title') || this.isModified('description')) {
+    try {
+      // Generate embedding from title and description fields
+      this.embedding = await generateEmbeddingFromFields(this, ['title', 'description']);
+    } catch (error) {
+      console.error('Error generating embedding for resource:', error);
+      // Continue saving even if embedding generation fails
+      // You can choose to throw the error if you want to prevent saving
+    }
+  }
+  next();
+});
 
 export default mongoose.model('Resource', resourceSchema);
 
