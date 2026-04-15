@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
-import './Discussions.css';
 import TopicRequestForm from './TopicRequestForm';
 import UserTopicRequestList from './UserTopicRequestList';
 import AdminTopicRequestList from './AdminTopicRequestList';
+
+const inputCls =
+  'w-full px-3 py-2.5 border border-gray-300 rounded-md text-sm text-gray-800 bg-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 box-border resize-y';
 
 const Discussions = ({ user }) => {
   const [topics, setTopics] = useState([]);
@@ -15,7 +17,6 @@ const Discussions = ({ user }) => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [expandedPosts, setExpandedPosts] = useState(new Set());
   const [newComments, setNewComments] = useState({});
-  const [newReplies, setNewReplies] = useState({});
 
   useEffect(() => {
     checkAdminStatus();
@@ -25,14 +26,10 @@ const Discussions = ({ user }) => {
   const checkAdminStatus = async () => {
     try {
       const response = await fetch(`http://localhost:5000/api/auth/users/${user.id}`, {
-        headers: {
-          'user-id': user.id
-        }
+        headers: { 'user-id': user.id }
       });
       const data = await response.json();
-      if (data.success && data.user) {
-        setIsAdmin(data.user.admin || false);
-      }
+      if (data.success && data.user) setIsAdmin(data.user.admin || false);
     } catch (error) {
       console.error('Error checking admin status:', error);
     }
@@ -44,9 +41,7 @@ const Discussions = ({ user }) => {
       const data = await response.json();
       if (data.success) {
         setTopics(data.topics);
-        if (data.topics.length > 0 && !selectedTopic) {
-          setSelectedTopic(data.topics[0]);
-        }
+        if (data.topics.length > 0 && !selectedTopic) setSelectedTopic(data.topics[0]);
       }
     } catch (error) {
       console.error('Error fetching topics:', error);
@@ -59,34 +54,25 @@ const Discussions = ({ user }) => {
     try {
       const response = await fetch(`http://localhost:5000/api/discussions/topics/${topicId}/posts`);
       const data = await response.json();
-      if (data.success) {
-        setPosts(data.posts);
-      }
+      if (data.success) setPosts(data.posts);
     } catch (error) {
       console.error('Error fetching posts:', error);
     }
   };
 
   useEffect(() => {
-    if (selectedTopic) {
-      fetchPosts(selectedTopic._id);
-    }
+    if (selectedTopic) fetchPosts(selectedTopic._id);
   }, [selectedTopic]);
 
   const handleCreateTopic = async (e) => {
     e.preventDefault();
     if (!newTopic.name.trim()) return;
-
     try {
       const response = await fetch('http://localhost:5000/api/discussions/topics', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'user-id': user.id
-        },
+        headers: { 'Content-Type': 'application/json', 'user-id': user.id },
         body: JSON.stringify(newTopic)
       });
-
       const data = await response.json();
       if (data.success) {
         setTopics([...topics, data.topic]);
@@ -104,17 +90,12 @@ const Discussions = ({ user }) => {
   const handleCreatePost = async (e) => {
     e.preventDefault();
     if (!newPost.content.trim()) return;
-
     try {
       const response = await fetch(`http://localhost:5000/api/discussions/topics/${selectedTopic._id}/posts`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'user-id': user.id
-        },
+        headers: { 'Content-Type': 'application/json', 'user-id': user.id },
         body: JSON.stringify(newPost)
       });
-
       const data = await response.json();
       if (data.success) {
         setPosts([data.post, ...posts]);
@@ -129,67 +110,45 @@ const Discussions = ({ user }) => {
   };
 
   const handleLikePost = async (postId) => {
-    // Optimistic update - update UI immediately
-    setPosts(posts.map(post => 
-      post._id === postId 
-        ? { ...post, likeCount: (post.likeCount || 0) + 1 }
-        : post
+    setPosts(posts.map(post =>
+      post._id === postId ? { ...post, likeCount: (post.likeCount || 0) + 1 } : post
     ));
-
     try {
       const response = await fetch(`http://localhost:5000/api/discussions/posts/${postId}/like`, {
         method: 'POST',
-        headers: {
-          'user-id': user.id
-        }
+        headers: { 'user-id': user.id }
       });
-
       const data = await response.json();
       if (data.success) {
-        // Update with server response
-        setPosts(posts.map(post => 
-          post._id === postId 
-            ? { ...post, likeCount: data.likeCount }
-            : post
+        setPosts(posts.map(post =>
+          post._id === postId ? { ...post, likeCount: data.likeCount } : post
         ));
       } else {
-        // Revert optimistic update on failure
-        setPosts(posts.map(post => 
-          post._id === postId 
-            ? { ...post, likeCount: (post.likeCount || 1) - 1 }
-            : post
+        setPosts(posts.map(post =>
+          post._id === postId ? { ...post, likeCount: (post.likeCount || 1) - 1 } : post
         ));
       }
     } catch (error) {
       console.error('Error liking post:', error);
-      // Revert optimistic update on error
-      setPosts(posts.map(post => 
-        post._id === postId 
-          ? { ...post, likeCount: (post.likeCount || 1) - 1 }
-          : post
+      setPosts(posts.map(post =>
+        post._id === postId ? { ...post, likeCount: (post.likeCount || 1) - 1 } : post
       ));
     }
   };
 
   const handleDeleteTopic = async (topicId) => {
-    if (!window.confirm('Are you sure you want to delete this topic? This will also delete all posts in this topic.')) {
-      return;
-    }
-
+    if (!window.confirm('Are you sure you want to delete this topic? This will also delete all posts in this topic.')) return;
     try {
       const response = await fetch(`http://localhost:5000/api/discussions/topics/${topicId}`, {
         method: 'DELETE',
-        headers: {
-          'user-id': user.id
-        }
+        headers: { 'user-id': user.id }
       });
-
       const data = await response.json();
       if (data.success) {
         setTopics(topics.filter(topic => topic._id !== topicId));
         if (selectedTopic && selectedTopic._id === topicId) {
           setSelectedTopic(topics.length > 1 ? topics.find(t => t._id !== topicId) : null);
-          setPosts([]); // Clear posts when the selected topic is deleted
+          setPosts([]);
         }
       } else {
         alert(data.message || 'Failed to delete topic');
@@ -200,33 +159,20 @@ const Discussions = ({ user }) => {
     }
   };
 
-  const handleRequestProcessed = () => {
-    // Refresh topics when a request is approved
-    fetchTopics();
-  };
-
-  const handleRequestCreated = () => {
-    // Optionally refresh user requests list
-    // This is handled by the UserTopicRequestList component itself
-  };
+  const handleRequestProcessed = () => { fetchTopics(); };
+  const handleRequestCreated = () => {};
 
   const handleAddReply = async (postId, content) => {
     try {
       const response = await fetch(`http://localhost:5000/api/discussions/posts/${postId}/replies`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'user-id': user.id
-        },
+        headers: { 'Content-Type': 'application/json', 'user-id': user.id },
         body: JSON.stringify({ content })
       });
-
       const data = await response.json();
       if (data.success) {
-        setPosts(posts.map(post => 
-          post._id === postId 
-            ? { ...post, replies: [...post.replies, data.reply] }
-            : post
+        setPosts(posts.map(post =>
+          post._id === postId ? { ...post, replies: [...post.replies, data.reply] } : post
         ));
         setNewComments({ ...newComments, [postId]: '' });
       } else {
@@ -239,71 +185,35 @@ const Discussions = ({ user }) => {
   };
 
   const handleLikeReply = async (postId, replyId) => {
-    // Optimistic update - update UI immediately
-    setPosts(posts.map(post => 
-      post._id === postId 
-        ? {
-            ...post,
-            replies: post.replies.map(reply =>
-              reply._id === replyId
-                ? { ...reply, likeCount: (reply.likeCount || 0) + 1 }
-                : reply
-            )
-          }
+    setPosts(posts.map(post =>
+      post._id === postId
+        ? { ...post, replies: post.replies.map(reply => reply._id === replyId ? { ...reply, likeCount: (reply.likeCount || 0) + 1 } : reply) }
         : post
     ));
-
     try {
       const response = await fetch(`http://localhost:5000/api/discussions/posts/${postId}/replies/${replyId}/like`, {
         method: 'POST',
-        headers: {
-          'user-id': user.id
-        }
+        headers: { 'user-id': user.id }
       });
-
       const data = await response.json();
       if (data.success) {
-        // Update with server response
-        setPosts(posts.map(post => 
-          post._id === postId 
-            ? {
-                ...post,
-                replies: post.replies.map(reply =>
-                  reply._id === replyId
-                    ? { ...reply, likeCount: data.likeCount }
-                    : reply
-                )
-              }
+        setPosts(posts.map(post =>
+          post._id === postId
+            ? { ...post, replies: post.replies.map(reply => reply._id === replyId ? { ...reply, likeCount: data.likeCount } : reply) }
             : post
         ));
       } else {
-        // Revert optimistic update on failure
-        setPosts(posts.map(post => 
-          post._id === postId 
-            ? {
-                ...post,
-                replies: post.replies.map(reply =>
-                  reply._id === replyId
-                    ? { ...reply, likeCount: (reply.likeCount || 1) - 1 }
-                    : reply
-                )
-              }
+        setPosts(posts.map(post =>
+          post._id === postId
+            ? { ...post, replies: post.replies.map(reply => reply._id === replyId ? { ...reply, likeCount: (reply.likeCount || 1) - 1 } : reply) }
             : post
         ));
       }
     } catch (error) {
       console.error('Error liking reply:', error);
-      // Revert optimistic update on error
-      setPosts(posts.map(post => 
-        post._id === postId 
-          ? {
-              ...post,
-              replies: post.replies.map(reply =>
-                reply._id === replyId
-                  ? { ...reply, likeCount: (reply.likeCount || 1) - 1 }
-                  : reply
-              )
-            }
+      setPosts(posts.map(post =>
+        post._id === postId
+          ? { ...post, replies: post.replies.map(reply => reply._id === replyId ? { ...reply, likeCount: (reply.likeCount || 1) - 1 } : reply) }
           : post
       ));
     }
@@ -312,26 +222,23 @@ const Discussions = ({ user }) => {
   const togglePostExpansion = (postId) => {
     setExpandedPosts(prev => {
       const next = new Set(prev);
-      if (next.has(postId)) {
-        next.delete(postId);
-      } else {
-        next.add(postId);
-      }
+      if (next.has(postId)) next.delete(postId); else next.add(postId);
       return next;
     });
   };
 
   if (loading) {
-    return <div className="discussions-loading">Loading discussions...</div>;
+    return <div className="text-center py-10 text-gray-500 text-lg">Loading discussions...</div>;
   }
 
   return (
-    <div className="discussions-container">
-      <div className="discussions-header">
-        <h2>Community Discussions</h2>
+    <div className="max-w-5xl mx-auto bg-gray-50 rounded-lg shadow-sm p-4 sm:p-5">
+      {/* Header */}
+      <div className="flex flex-wrap justify-between items-center mb-5 pb-4 border-b-2 border-gray-200 gap-3">
+        <h2 className="text-gray-800 m-0 text-2xl sm:text-3xl font-bold">Community Discussions</h2>
         {isAdmin && (
-          <button 
-            className="add-topic-btn"
+          <button
+            className="bg-blue-500 hover:bg-blue-600 text-white border-0 px-5 py-2.5 rounded-md cursor-pointer text-sm font-medium transition-colors"
             onClick={() => setShowTopicForm(!showTopicForm)}
           >
             {showTopicForm ? 'Cancel' : 'Add Topic'}
@@ -339,77 +246,74 @@ const Discussions = ({ user }) => {
         )}
       </div>
 
+      {/* Admin create topic form */}
       {showTopicForm && isAdmin && (
-        <form className="topic-form" onSubmit={handleCreateTopic}>
-          <h3>Create New Topic</h3>
-          <div className="form-group">
-            <label htmlFor="topic-name">Topic Name</label>
+        <form className="bg-white p-5 rounded-lg mb-5 shadow-sm" onSubmit={handleCreateTopic}>
+          <h3 className="mt-0 text-gray-800 text-lg font-semibold mb-4">Create New Topic</h3>
+          <div className="mb-4">
+            <label htmlFor="topic-name" className="block mb-1.5 font-semibold text-sm text-gray-700">Topic Name</label>
             <input
               id="topic-name"
               type="text"
+              className={inputCls}
               value={newTopic.name}
               onChange={(e) => setNewTopic({ ...newTopic, name: e.target.value })}
               placeholder="e.g., Infant Care"
               required
             />
           </div>
-          <div className="form-group">
-            <label htmlFor="topic-description">Description (Optional)</label>
+          <div className="mb-4">
+            <label htmlFor="topic-description" className="block mb-1.5 font-semibold text-sm text-gray-700">Description (Optional)</label>
             <textarea
               id="topic-description"
+              className={inputCls}
               value={newTopic.description}
               onChange={(e) => setNewTopic({ ...newTopic, description: e.target.value })}
               placeholder="Brief description of this topic..."
               rows="3"
             />
           </div>
-          <div className="form-actions">
-            <button type="submit" className="submit-btn">Create Topic</button>
-            <button type="button" onClick={() => setShowTopicForm(false)} className="cancel-btn">
+          <div className="flex flex-wrap gap-2.5">
+            <button type="submit" className="bg-green-600 hover:bg-green-700 text-white border-0 px-5 py-2.5 rounded-md cursor-pointer text-sm font-medium transition-colors">
+              Create Topic
+            </button>
+            <button type="button" onClick={() => setShowTopicForm(false)} className="bg-gray-400 hover:bg-gray-500 text-white border-0 px-5 py-2.5 rounded-md cursor-pointer text-sm font-medium transition-colors">
               Cancel
             </button>
           </div>
         </form>
       )}
 
-      {isAdmin && (
-        <AdminTopicRequestList 
-          user={user} 
-          onRequestProcessed={handleRequestProcessed}
-        />
-      )}
+      {isAdmin && <AdminTopicRequestList user={user} onRequestProcessed={handleRequestProcessed} />}
+      {!isAdmin && <TopicRequestForm user={user} onRequestCreated={handleRequestCreated} />}
 
-      {!isAdmin && (
-        <TopicRequestForm 
-          user={user} 
-          onRequestCreated={handleRequestCreated}
-        />
-      )}
-
-      <div className="discussions-content">
-        <div className="topics-sidebar">
-          <h3>Topics</h3>
+      {/* Main content: sidebar + posts */}
+      <div className="flex flex-col lg:flex-row gap-5 mt-5 min-h-[400px]">
+        {/* Topics sidebar */}
+        <div className="w-full lg:w-72 lg:shrink-0 bg-white rounded-lg p-4 sm:p-5 shadow-sm h-fit">
+          <h3 className="mt-0 mb-4 text-gray-800 font-semibold text-base border-b-2 border-gray-100 pb-2.5">Topics</h3>
           {topics.length === 0 ? (
-            <p className="no-topics">No topics available yet.</p>
+            <p className="text-center text-gray-500 italic py-5">No topics available yet.</p>
           ) : (
-            <div className="topics-list">
+            <div className="flex flex-col gap-2.5">
               {topics.map(topic => (
-                <div 
-                  key={topic._id} 
-                  className={`topic-item ${selectedTopic?._id === topic._id ? 'active' : ''}`}
+                <div
+                  key={topic._id}
+                  className={`group relative p-4 border rounded-md cursor-pointer transition-all ${
+                    selectedTopic?._id === topic._id
+                      ? 'border-blue-400 bg-blue-50'
+                      : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50'
+                  }`}
                   onClick={() => setSelectedTopic(topic)}
                 >
-                  <div className="topic-info">
-                    <h4>{topic.name}</h4>
-                    {topic.description && <p>{topic.description}</p>}
+                  <div className={isAdmin ? 'pr-6' : ''}>
+                    <h4 className="m-0 mb-1 text-gray-800 text-base font-semibold">{topic.name}</h4>
+                    {topic.description && <p className="m-0 text-gray-500 text-sm">{topic.description}</p>}
                   </div>
                   {isAdmin && (
-                    <button 
-                      className="delete-topic-btn"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteTopic(topic._id);
-                      }}
+                    <button
+                      className="absolute top-1.5 right-1.5 bg-red-500 hover:bg-red-600 text-white border-0 rounded-full w-6 h-6 flex items-center justify-center text-base leading-none opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer p-0"
+                      onClick={(e) => { e.stopPropagation(); handleDeleteTopic(topic._id); }}
                       title="Delete topic"
                     >
                       ×
@@ -421,19 +325,25 @@ const Discussions = ({ user }) => {
           )}
         </div>
 
-        <div className="posts-section">
+        {/* Posts section */}
+        <div className="flex-1 bg-white rounded-lg p-4 sm:p-5 shadow-sm min-w-0">
           {selectedTopic ? (
             <>
-              <div className="posts-header">
-                <h3>{selectedTopic.name}</h3>
-                <p>{selectedTopic.description}</p>
+              <div className="mb-5 pb-4 border-b-2 border-gray-100">
+                <h3 className="m-0 mb-1 text-gray-800 text-xl font-semibold">{selectedTopic.name}</h3>
+                {selectedTopic.description && (
+                  <p className="m-0 text-gray-500 text-sm">{selectedTopic.description}</p>
+                )}
               </div>
 
-              <form className="post-form" onSubmit={handleCreatePost}>
-                <div className="form-group">
-                  <label htmlFor="post-content">Share your thoughts (max 100 words)</label>
+              <form className="bg-gray-50 p-4 sm:p-5 rounded-lg mb-5 border border-gray-200" onSubmit={handleCreatePost}>
+                <div className="mb-4">
+                  <label htmlFor="post-content" className="block mb-2 font-semibold text-sm text-gray-700">
+                    Share your thoughts (max 100 words)
+                  </label>
                   <textarea
                     id="post-content"
+                    className={inputCls}
                     value={newPost.content}
                     onChange={(e) => setNewPost({ content: e.target.value })}
                     placeholder="What's on your mind?"
@@ -441,35 +351,35 @@ const Discussions = ({ user }) => {
                     maxLength="500"
                     required
                   />
-                  <div className="char-count">
-                    {newPost.content.split(' ').filter(word => word.length > 0).length}/100 words
+                  <div className="text-right text-xs text-gray-500 mt-1.5">
+                    {newPost.content.split(' ').filter(w => w.length > 0).length}/100 words
                   </div>
                 </div>
-                <button type="submit" className="submit-btn">Post</button>
+                <button type="submit" className="bg-green-600 hover:bg-green-700 text-white border-0 px-5 py-2.5 rounded-md cursor-pointer text-sm font-medium transition-colors">
+                  Post
+                </button>
               </form>
 
-              <div className="posts-list">
+              <div className="flex flex-col gap-4">
                 {posts.length === 0 ? (
-                  <p className="no-posts">No posts yet. Be the first to share!</p>
+                  <p className="text-center text-gray-500 italic py-10">No posts yet. Be the first to share!</p>
                 ) : (
                   posts.map(post => (
-                    <div key={post._id} className="post-item">
-                      <div className="post-header">
-                        <span className="post-author">{post.authorName}</span>
-                        <span className="post-date">
-                          {new Date(post.createdAt).toLocaleDateString()}
-                        </span>
+                    <div key={post._id} className="bg-gray-50 border border-gray-200 rounded-lg p-4 sm:p-5 hover:shadow-md transition-shadow">
+                      <div className="flex justify-between items-center mb-2.5">
+                        <span className="font-semibold text-gray-800">{post.authorName}</span>
+                        <span className="text-gray-500 text-sm">{new Date(post.createdAt).toLocaleDateString()}</span>
                       </div>
-                      <div className="post-content">{post.content}</div>
-                      <div className="post-actions">
-                        <button 
-                          className="like-btn"
+                      <div className="text-gray-700 leading-relaxed mb-4">{post.content}</div>
+                      <div className="flex flex-wrap gap-3 items-center">
+                        <button
+                          className="bg-transparent border border-gray-300 px-3 py-2 rounded-full cursor-pointer text-sm flex items-center gap-1.5 hover:bg-gray-100 hover:border-blue-400 text-black transition-all"
                           onClick={() => handleLikePost(post._id)}
                         >
                           ❤️ {post.likeCount || 0}
                         </button>
-                        <button 
-                          className="comment-toggle-btn"
+                        <button
+                          className="bg-transparent border border-gray-300 px-3 py-2 rounded-full cursor-pointer text-sm flex items-center gap-1.5 text-gray-500 hover:bg-gray-100 hover:border-blue-400 hover:text-blue-500 transition-all"
                           onClick={() => togglePostExpansion(post._id)}
                         >
                           💬 {post.replies.length} replies
@@ -477,41 +387,38 @@ const Discussions = ({ user }) => {
                       </div>
 
                       {expandedPosts.has(post._id) && (
-                        <div className="comments-section">
-                          <div className="add-comment">
+                        <div className="mt-4 pt-4 border-t border-gray-200">
+                          <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
                             <textarea
+                              className={`${inputCls} min-h-[60px] mb-2.5`}
                               placeholder="Add a reply..."
                               value={newComments[post._id] || ''}
                               onChange={(e) => setNewComments({ ...newComments, [post._id]: e.target.value })}
                               rows="2"
                             />
-                            <button 
+                            <button
                               onClick={() => handleAddReply(post._id, newComments[post._id])}
                               disabled={!newComments[post._id]?.trim()}
-                              className="submit-comment-btn"
+                              className="bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 text-white border-0 px-4 py-2 rounded-md cursor-pointer text-sm font-medium transition-colors disabled:cursor-not-allowed"
                             >
                               Reply
                             </button>
                           </div>
 
-                          <div className="comments-list">
+                          <div className="flex flex-col gap-3">
                             {post.replies.map(reply => (
-                              <div key={reply._id} className="comment-item">
-                                <div className="comment-header">
-                                  <span className="comment-author">{reply.authorName}</span>
-                                  <span className="comment-date">
-                                    {new Date(reply.createdAt).toLocaleDateString()}
-                                  </span>
+                              <div key={reply._id} className="bg-white border border-gray-200 rounded-lg p-4">
+                                <div className="flex justify-between items-center mb-2">
+                                  <span className="font-semibold text-gray-800 text-sm">{reply.authorName}</span>
+                                  <span className="text-gray-500 text-xs">{new Date(reply.createdAt).toLocaleDateString()}</span>
                                 </div>
-                                <div className="comment-content">{reply.content}</div>
-                                <div className="comment-actions">
-                                  <button 
-                                    className="like-btn"
-                                    onClick={() => handleLikeReply(post._id, reply._id)}
-                                  >
-                                    ❤️ {reply.likeCount || 0}
-                                  </button>
-                                </div>
+                                <div className="text-gray-700 leading-snug mb-2.5 text-sm">{reply.content}</div>
+                                <button
+                                  className="bg-transparent border border-gray-300 px-3 py-1.5 rounded-full cursor-pointer text-sm flex items-center gap-1.5 hover:bg-gray-100 hover:border-blue-400 text-black transition-all"
+                                  onClick={() => handleLikeReply(post._id, reply._id)}
+                                >
+                                  ❤️ {reply.likeCount || 0}
+                                </button>
                               </div>
                             ))}
                           </div>
@@ -523,8 +430,8 @@ const Discussions = ({ user }) => {
               </div>
             </>
           ) : (
-            <div className="no-topic-selected">
-              <p>Select a topic to view and participate in discussions.</p>
+            <div className="text-center text-gray-500 italic py-10">
+              Select a topic to view and participate in discussions.
             </div>
           )}
         </div>

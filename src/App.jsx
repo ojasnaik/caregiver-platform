@@ -2,12 +2,10 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import SignupForm from './components/SignupForm';
 import LoginForm from './components/LoginForm';
 import HomePage from './components/HomePage';
-import './App.css';
-
 function App() {
   return (
     <Router>
-      <div className="App">
+      <div className="w-full min-h-screen">
         <Routes>
           <Route path="/" element={<Navigate to="/login" replace />} />
           <Route path="/signup" element={<SignupForm />} />

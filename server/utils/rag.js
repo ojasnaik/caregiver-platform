@@ -1,19 +1,19 @@
 import mongoose from 'mongoose';
 import { generateEmbedding } from './embeddings.js';
+import { rerankDocuments } from './reranker.js';
+import { RAG_CONFIG } from '../config/rag.config.js';
 
 /**
- * Perform vector search on posts collection
- * @param {number[]} queryEmbedding - The embedding vector of the user query
- * @param {number} limit - Maximum number of results to return
- * @param {number} minScore - Minimum similarity score (0-1)
- * @returns {Promise<Array>} Array of relevant posts
+ * Perform vector search on posts collection (Stage 1 — coarse retrieval).
+ * Returns up to candidateLimit results at minScore. Reranking happens in performRAGSearch.
  */
-export async function searchPosts(queryEmbedding, limit = 3, minScore = 0.7) {
+async function searchPosts(queryEmbedding) {
+  const { candidateLimit, minScore } = RAG_CONFIG.vectorSearch;
   try {
     const db = mongoose.connection.db;
     const postsCollection = db.collection('posts');
 
-    console.log(`\n[Vector Search] Searching posts with limit=${limit}, minScore=${minScore}`);
+    console.log(`\n[Vector Search] Searching posts — limit=${candidateLimit}, minScore=${minScore}`);
     console.log(`[Vector Search] Query embedding dimensions: ${queryEmbedding.length}`);
 
     const results = await postsCollection.aggregate([
@@ -23,7 +23,7 @@ export async function searchPosts(queryEmbedding, limit = 3, minScore = 0.7) {
           path: 'embedding',
           queryVector: queryEmbedding,
           numCandidates: 100,
-          limit: limit
+          limit: candidateLimit
         }
       },
       {
@@ -37,16 +37,14 @@ export async function searchPosts(queryEmbedding, limit = 3, minScore = 0.7) {
         }
       },
       {
-        $match: {
-          score: { $gte: minScore }
-        }
+        $match: { score: { $gte: minScore } }
       }
     ]).toArray();
 
-    console.log(`[Vector Search] Posts found: ${results.length}`);
-    results.forEach((post, index) => {
-      console.log(`  [Post ${index + 1}] Score: ${post.score.toFixed(4)} | Author: ${post.authorName} | Topic: ${post.topicName}`);
-      console.log(`    Content: ${post.content.substring(0, 100)}${post.content.length > 100 ? '...' : ''}`);
+    console.log(`[Vector Search] Posts retrieved: ${results.length}`);
+    results.forEach((post, i) => {
+      console.log(`  [Post ${i + 1}] vectorScore=${post.score.toFixed(4)} | author=${post.authorName} | topic=${post.topicName}`);
+      console.log(`    "${post.content.substring(0, 100)}${post.content.length > 100 ? '...' : ''}"`);
     });
 
     return results;
@@ -57,18 +55,15 @@ export async function searchPosts(queryEmbedding, limit = 3, minScore = 0.7) {
 }
 
 /**
- * Perform vector search on resources collection
- * @param {number[]} queryEmbedding - The embedding vector of the user query
- * @param {number} limit - Maximum number of results to return
- * @param {number} minScore - Minimum similarity score (0-1)
- * @returns {Promise<Array>} Array of relevant resources
+ * Perform vector search on resources collection (Stage 1 — coarse retrieval).
  */
-export async function searchResources(queryEmbedding, limit = 3, minScore = 0.7) {
+async function searchResources(queryEmbedding) {
+  const { candidateLimit, minScore } = RAG_CONFIG.vectorSearch;
   try {
     const db = mongoose.connection.db;
     const resourcesCollection = db.collection('resources');
 
-    console.log(`\n[Vector Search] Searching resources with limit=${limit}, minScore=${minScore}`);
+    console.log(`\n[Vector Search] Searching resources — limit=${candidateLimit}, minScore=${minScore}`);
     console.log(`[Vector Search] Query embedding dimensions: ${queryEmbedding.length}`);
 
     const results = await resourcesCollection.aggregate([
@@ -78,7 +73,7 @@ export async function searchResources(queryEmbedding, limit = 3, minScore = 0.7)
           path: 'embedding',
           queryVector: queryEmbedding,
           numCandidates: 100,
-          limit: limit
+          limit: candidateLimit
         }
       },
       {
@@ -92,16 +87,14 @@ export async function searchResources(queryEmbedding, limit = 3, minScore = 0.7)
         }
       },
       {
-        $match: {
-          score: { $gte: minScore }
-        }
+        $match: { score: { $gte: minScore } }
       }
     ]).toArray();
 
-    console.log(`[Vector Search] Resources found: ${results.length}`);
-    results.forEach((resource, index) => {
-      console.log(`  [Resource ${index + 1}] Score: ${resource.score.toFixed(4)} | Title: ${resource.title}`);
-      console.log(`    Description: ${resource.description.substring(0, 100)}${resource.description.length > 100 ? '...' : ''}`);
+    console.log(`[Vector Search] Resources retrieved: ${results.length}`);
+    results.forEach((resource, i) => {
+      console.log(`  [Resource ${i + 1}] vectorScore=${resource.score.toFixed(4)} | title="${resource.title}"`);
+      console.log(`    "${resource.description.substring(0, 100)}${resource.description.length > 100 ? '...' : ''}"`);
       console.log(`    URL: ${resource.url}`);
     });
 
@@ -113,55 +106,68 @@ export async function searchResources(queryEmbedding, limit = 3, minScore = 0.7)
 }
 
 /**
- * Perform RAG search on both posts and resources
+ * Full two-stage RAG search: vector retrieval → reranker → LLM context.
  * @param {string} query - The user's query text
- * @param {Object} options - Search options
- * @returns {Promise<Object>} Object containing relevant posts and resources
+ * @param {Object} options
+ * @param {number} options.postsLimit - Max posts to pass to LLM (after reranking)
+ * @param {number} options.resourcesLimit - Max resources to pass to LLM (after reranking)
+ * @returns {Promise<{posts: Array, resources: Array}>}
  */
 export async function performRAGSearch(query, options = {}) {
   const {
-    postsLimit = 3,
-    resourcesLimit = 3,
-    minScore = 0.7
+    postsLimit = RAG_CONFIG.llm.postsLimit,
+    resourcesLimit = RAG_CONFIG.llm.resourcesLimit,
   } = options;
 
   try {
-    console.log('\n=== RAG Search Started ===');
+    console.log('\n════════════════════════════════════════════');
+    console.log('=== RAG Search Started ===');
     console.log(`[RAG] User Query: "${query}"`);
-    console.log(`[RAG] Search parameters: postsLimit=${postsLimit}, resourcesLimit=${resourcesLimit}, minScore=${minScore}`);
+    console.log(`[RAG] Config: vectorMinScore=${RAG_CONFIG.vectorSearch.minScore}, candidateLimit=${RAG_CONFIG.vectorSearch.candidateLimit}, rerankerThreshold=${RAG_CONFIG.reranker.threshold}, postsLimit=${postsLimit}, resourcesLimit=${resourcesLimit}`);
 
-    // Generate embedding for the query
-    console.log('[RAG] Generating embedding for query...');
+    console.log('\n[RAG] Stage 1 — Generating query embedding...');
     const queryEmbedding = await generateEmbedding(query);
-    console.log(`[RAG] Embedding generated: ${queryEmbedding.length} dimensions`);
-    console.log(`[RAG] Embedding sample (first 5 values): [${queryEmbedding.slice(0, 5).map(v => v.toFixed(4)).join(', ')}, ...]`);
+    console.log(`[RAG] Embedding: ${queryEmbedding.length} dims | sample=[${queryEmbedding.slice(0, 5).map(v => v.toFixed(4)).join(', ')}, ...]`);
 
-    // Perform parallel searches
-    const [posts, resources] = await Promise.all([
-      searchPosts(queryEmbedding, postsLimit, minScore),
-      searchResources(queryEmbedding, resourcesLimit, minScore)
+    console.log('\n[RAG] Stage 1 — Vector search (parallel)...');
+    const [postCandidates, resourceCandidates] = await Promise.all([
+      searchPosts(queryEmbedding),
+      searchResources(queryEmbedding)
     ]);
 
-    console.log(`\n[RAG] Search Summary:`);
-    console.log(`  - Posts matched: ${posts.length}`);
-    console.log(`  - Resources matched: ${resources.length}`);
-    console.log(`=== RAG Search Completed ===\n`);
+    console.log(`\n[RAG] Stage 1 Summary: ${postCandidates.length} post candidates, ${resourceCandidates.length} resource candidates`);
 
-    return {
-      posts,
-      resources
-    };
+    console.log('\n[RAG] Stage 2 — Reranking (parallel)...');
+    const [posts, resources] = await Promise.all([
+      rerankDocuments(
+        query,
+        postCandidates,
+        doc => `${doc.content} ${doc.topicName}`,
+        RAG_CONFIG.reranker.threshold,
+        postsLimit
+      ),
+      rerankDocuments(
+        query,
+        resourceCandidates,
+        doc => `${doc.title}. ${doc.description}`,
+        RAG_CONFIG.reranker.threshold,
+        resourcesLimit
+      )
+    ]);
+
+    console.log(`\n[RAG] Stage 2 Summary: ${posts.length} posts, ${resources.length} resources passed reranking`);
+    console.log('=== RAG Search Completed ===');
+    console.log('════════════════════════════════════════════\n');
+
+    return { posts, resources };
   } catch (error) {
     console.error('[RAG] Error performing RAG search:', error);
-    return {
-      posts: [],
-      resources: []
-    };
+    return { posts: [], resources: [] };
   }
 }
 
 /**
- * Format RAG results into context string for the LLM
+ * Format RAG results into a context string for the LLM prompt.
  * @param {Object} ragResults - Results from performRAGSearch
  * @returns {string} Formatted context string
  */
@@ -169,22 +175,24 @@ export function formatRAGContext(ragResults) {
   const { posts, resources } = ragResults;
   const contextParts = [];
 
-  console.log('[RAG Context] Formatting context for LLM...');
+  const usingFallback = [...posts, ...resources].some(d => d.rerankerFallback);
+  console.log(`[RAG Context] Formatting context for LLM... (rerankerFallback=${usingFallback})`);
 
   if (posts.length > 0) {
-    contextParts.push('## Relevant Posts from Community:');
+    contextParts.push('## Community Posts:');
     posts.forEach((post, index) => {
       contextParts.push(
         `\n### Post ${index + 1} (by ${post.authorName} in topic: ${post.topicName}):\n` +
         `Content: ${post.content}\n` +
         `Posted: ${new Date(post.createdAt).toLocaleDateString()}`
       );
-      console.log(`  [Context] Added Post ${index + 1}: "${post.content.substring(0, 50)}..." (Score: ${post.score?.toFixed(4) || 'N/A'})`);
+      const rscore = post.rerankScore != null ? post.rerankScore.toFixed(4) : 'fallback';
+      console.log(`  [Context] Post ${index + 1}: rerankScore=${rscore} vectorScore=${post.score?.toFixed(4) ?? 'n/a'} | "${post.content.substring(0, 50)}..."`);
     });
   }
 
   if (resources.length > 0) {
-    contextParts.push('\n## Relevant Resources:');
+    contextParts.push('\n## Resources:');
     resources.forEach((resource, index) => {
       contextParts.push(
         `\n### Resource ${index + 1}:\n` +
@@ -192,12 +200,13 @@ export function formatRAGContext(ragResults) {
         `Description: ${resource.description}\n` +
         `URL: ${resource.url}`
       );
-      console.log(`  [Context] Added Resource ${index + 1}: "${resource.title}" (Score: ${resource.score?.toFixed(4) || 'N/A'})`);
+      const rscore = resource.rerankScore != null ? resource.rerankScore.toFixed(4) : 'fallback';
+      console.log(`  [Context] Resource ${index + 1}: rerankScore=${rscore} vectorScore=${resource.score?.toFixed(4) ?? 'n/a'} | "${resource.title}"`);
     });
   }
 
   const context = contextParts.join('\n');
-  console.log(`[RAG Context] Context length: ${context.length} characters`);
-  
-  return context;
+  console.log(`[RAG Context] Total context length: ${context.length} characters`);
+
+  return { context, usingFallback };
 }

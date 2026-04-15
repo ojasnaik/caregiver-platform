@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import './AdminTopicRequestList.css';
 
 const AdminTopicRequestList = ({ user, onRequestProcessed }) => {
   const [requests, setRequests] = useState([]);
@@ -44,7 +43,6 @@ const AdminTopicRequestList = ({ user, onRequestProcessed }) => {
 
       const data = await response.json();
       if (data.success) {
-        // Remove from list (rejected requests disappear from admin view)
         setRequests(requests.filter(req => req._id !== requestId));
         if (onRequestProcessed) {
           onRequestProcessed();
@@ -112,7 +110,6 @@ const AdminTopicRequestList = ({ user, onRequestProcessed }) => {
       if (data.success) {
         setShowRejectModal(null);
         setRejectReason('');
-        // Remove from list (rejected requests disappear from admin view)
         setRequests(requests.filter(req => req._id !== requestId));
         if (onRequestProcessed) {
           onRequestProcessed();
@@ -129,59 +126,61 @@ const AdminTopicRequestList = ({ user, onRequestProcessed }) => {
   };
 
   if (loading) {
-    return <div className="admin-requests-loading">Loading pending requests...</div>;
+    return <div className="text-center text-gray-500 py-5">Loading pending requests...</div>;
   }
 
   if (requests.length === 0) {
     return (
-      <div className="admin-requests-section">
-        <h3>Pending Topic Requests</h3>
-        <p className="no-pending-requests">No pending topic requests.</p>
+      <div className="mt-4">
+        <h3 className="font-semibold text-gray-800 mb-3">Pending Topic Requests</h3>
+        <p className="text-gray-500 text-sm italic text-center py-5">No pending topic requests.</p>
       </div>
     );
   }
 
+  const actionBtnBase = 'border-0 px-4 py-2 rounded text-sm cursor-pointer transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed';
+
   return (
-    <div className="admin-requests-section">
-      <h3>Pending Topic Requests</h3>
-      <div className="pending-requests-list">
+    <div className="mt-4">
+      <h3 className="font-semibold text-gray-800 mb-3">Pending Topic Requests</h3>
+      <div className="flex flex-col gap-4">
         {requests.map(request => (
-          <div key={request._id} className="pending-request-item">
-            <div className="pending-request-header">
+          <div key={request._id} className="bg-white p-5 rounded-lg border border-gray-200 border-l-4 border-l-yellow-400 hover:shadow-md transition-shadow">
+            <div className="flex justify-between items-start mb-2">
               <div>
-                <h4>{request.name}</h4>
+                <h4 className="font-semibold text-gray-800 m-0 mb-1">{request.name}</h4>
                 {request.userId && (
-                  <p className="request-author">
+                  <p className="text-sm text-gray-500 italic m-0">
                     Requested by: {request.userId.alias || request.userId.name}
                   </p>
                 )}
               </div>
-              <span className="pending-badge">Pending</span>
-            </div>
-            {request.description && (
-              <p className="pending-request-description">{request.description}</p>
-            )}
-            {request.status === 'Edit_Requested' && request.feedbackText && (
-              <div className="feedback-section">
-                <p className="feedback-label">Feedback:</p>
-                <p className="feedback-text">{request.feedbackText}</p>
-              </div>
-            )}
-            <div className="pending-request-meta">
-              <span className="pending-request-date">
-                Submitted: {new Date(request.createdAt).toLocaleDateString()}
+              <span className="px-3 py-1 rounded-full text-xs font-semibold bg-yellow-50 text-yellow-500 border border-yellow-400 uppercase tracking-wide whitespace-nowrap">
+                Pending
               </span>
             </div>
-            <div className="pending-request-actions">
+            {request.description && (
+              <p className="text-gray-600 text-sm mb-2">{request.description}</p>
+            )}
+            {request.status === 'Edit_Requested' && request.feedbackText && (
+              <div className="my-3 p-3 bg-blue-50 border-l-4 border-l-blue-500 rounded">
+                <p className="text-sm font-semibold text-blue-700 mb-1">Feedback:</p>
+                <p className="text-sm text-blue-800 m-0">{request.feedbackText}</p>
+              </div>
+            )}
+            <div className="text-xs text-gray-400 mt-2 mb-3">
+              Submitted: {new Date(request.createdAt).toLocaleDateString()}
+            </div>
+            <div className="flex gap-2 flex-wrap">
               <button
-                className="approve-btn"
+                className={`${actionBtnBase} bg-green-500 hover:bg-green-600 text-white`}
                 onClick={() => handleApprove(request._id)}
                 disabled={processing[request._id]}
               >
                 {processing[request._id] === 'approving' ? 'Approving...' : 'Approve'}
               </button>
               <button
-                className="request-edit-btn"
+                className={`${actionBtnBase} bg-blue-500 hover:bg-blue-600 text-white`}
                 onClick={() => {
                   setShowEditModal(request._id);
                   setEditFeedback('');
@@ -191,7 +190,7 @@ const AdminTopicRequestList = ({ user, onRequestProcessed }) => {
                 Request Edit
               </button>
               <button
-                className="reject-btn"
+                className={`${actionBtnBase} bg-red-500 hover:bg-red-600 text-white`}
                 onClick={() => {
                   setShowRejectModal(request._id);
                   setRejectReason('');
@@ -207,27 +206,27 @@ const AdminTopicRequestList = ({ user, onRequestProcessed }) => {
 
       {/* Edit Request Modal */}
       {showEditModal && (
-        <div className="modal-overlay" onClick={() => setShowEditModal(null)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <h3>Request Edits</h3>
-            <p className="modal-description">Provide feedback to help the user improve their topic request:</p>
+        <div className="fixed inset-0 bg-black/50 flex justify-center items-center z-[1000]" onClick={() => setShowEditModal(null)}>
+          <div className="bg-white p-6 rounded-lg max-w-lg w-[90%] shadow-lg" onClick={(e) => e.stopPropagation()}>
+            <h3 className="mt-0 mb-3 text-gray-800">Request Edits</h3>
+            <p className="text-sm text-gray-600 mb-3">Provide feedback to help the user improve their topic request:</p>
             <textarea
-              className="modal-textarea"
+              className="w-full px-2.5 py-2.5 border border-gray-300 rounded text-sm resize-y mb-4 box-border focus:outline-none focus:border-blue-500 font-[inherit]"
               value={editFeedback}
               onChange={(e) => setEditFeedback(e.target.value)}
               placeholder="Enter feedback for the user..."
               rows="5"
             />
-            <div className="modal-actions">
+            <div className="flex gap-2.5 justify-end">
               <button
-                className="modal-submit-btn"
+                className={`${actionBtnBase} bg-blue-500 hover:bg-blue-600 text-white`}
                 onClick={() => handleRequestEdit(showEditModal)}
                 disabled={processing[showEditModal] || !editFeedback.trim()}
               >
                 {processing[showEditModal] === 'requesting-edit' ? 'Sending...' : 'Send Feedback'}
               </button>
               <button
-                className="modal-cancel-btn"
+                className="bg-gray-200 hover:bg-gray-300 text-gray-700 border-0 px-4 py-2 rounded text-sm cursor-pointer transition-colors"
                 onClick={() => {
                   setShowEditModal(null);
                   setEditFeedback('');
@@ -243,27 +242,27 @@ const AdminTopicRequestList = ({ user, onRequestProcessed }) => {
 
       {/* Reject Modal */}
       {showRejectModal && (
-        <div className="modal-overlay" onClick={() => setShowRejectModal(null)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <h3>Reject Topic Request</h3>
-            <p className="modal-description">Please provide a reason for rejection (optional but recommended):</p>
+        <div className="fixed inset-0 bg-black/50 flex justify-center items-center z-[1000]" onClick={() => setShowRejectModal(null)}>
+          <div className="bg-white p-6 rounded-lg max-w-lg w-[90%] shadow-lg" onClick={(e) => e.stopPropagation()}>
+            <h3 className="mt-0 mb-3 text-gray-800">Reject Topic Request</h3>
+            <p className="text-sm text-gray-600 mb-3">Please provide a reason for rejection (optional but recommended):</p>
             <textarea
-              className="modal-textarea"
+              className="w-full px-2.5 py-2.5 border border-gray-300 rounded text-sm resize-y mb-4 box-border focus:outline-none focus:border-blue-500 font-[inherit]"
               value={rejectReason}
               onChange={(e) => setRejectReason(e.target.value)}
               placeholder="Enter rejection reason..."
               rows="5"
             />
-            <div className="modal-actions">
+            <div className="flex gap-2.5 justify-end">
               <button
-                className="reject-btn"
+                className={`${actionBtnBase} bg-red-500 hover:bg-red-600 text-white`}
                 onClick={() => handleReject(showRejectModal)}
                 disabled={processing[showRejectModal]}
               >
                 {processing[showRejectModal] === 'rejecting' ? 'Rejecting...' : 'Confirm Reject'}
               </button>
               <button
-                className="modal-cancel-btn"
+                className="bg-gray-200 hover:bg-gray-300 text-gray-700 border-0 px-4 py-2 rounded text-sm cursor-pointer transition-colors"
                 onClick={() => {
                   setShowRejectModal(null);
                   setRejectReason('');
@@ -281,4 +280,3 @@ const AdminTopicRequestList = ({ user, onRequestProcessed }) => {
 };
 
 export default AdminTopicRequestList;
-

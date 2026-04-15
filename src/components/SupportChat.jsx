@@ -23,8 +23,7 @@ const SupportChat = ({ user }) => {
 
     const userMessage = inputMessage.trim();
     setInputMessage('');
-    
-    // Add user message to chat
+
     const newUserMessage = {
       role: 'user',
       content: userMessage,
@@ -43,7 +42,7 @@ const SupportChat = ({ user }) => {
       });
 
       const data = await response.json();
-      
+
       if (data.success) {
         const aiMessage = {
           role: 'assistant',
@@ -80,20 +79,20 @@ const SupportChat = ({ user }) => {
   };
 
   return (
-    <div className="support-chat-container">
-      <div className="chat-header">
-        <h2>Support Chat</h2>
-        <p className="chat-subtitle">Ask questions and get AI-powered assistance</p>
+    <div className="flex flex-col max-w-3xl mx-auto bg-white rounded-lg shadow-md overflow-hidden" style={{ height: 'calc(100svh - 155px)' }}>
+      <div className="p-5 bg-brand-gradient text-white flex justify-between items-center flex-wrap gap-2.5">
+        <h2 className="m-0 text-2xl font-semibold">Support Chat</h2>
+        <p className="mt-1 mb-0 text-sm opacity-90 w-full">Ask questions and get AI-powered assistance</p>
         {messages.length > 0 && (
-          <button className="clear-chat-btn" onClick={handleClear}>
+          <button className="bg-white/20 text-white border border-white/30 px-3 py-1.5 rounded text-xs cursor-pointer hover:bg-white/30 transition-colors" onClick={handleClear}>
             Clear Chat
           </button>
         )}
       </div>
 
-      <div className="chat-messages">
+      <div className="flex-1 overflow-y-auto p-5 bg-gray-100 flex flex-col gap-4 chat-messages">
         {messages.length === 0 ? (
-          <div className="chat-welcome">
+          <div className="text-center py-10 px-5 text-gray-500">
             <p>👋 Welcome to Support Chat!</p>
             <p>I'm here to help you with any questions or concerns. Feel free to ask me anything!</p>
           </div>
@@ -101,9 +100,17 @@ const SupportChat = ({ user }) => {
           messages.map((message, index) => (
             <div
               key={index}
-              className={`message ${message.role} ${message.isError ? 'error' : ''}`}
+              className={`flex flex-col max-w-[75%] animate-[fadeIn_0.3s_ease-in] ${message.role === 'user' ? 'self-end' : 'self-start'}`}
             >
-              <div className="message-content">
+              <div
+                className={
+                  message.isError
+                    ? 'px-4 py-3 rounded-[18px] break-words leading-relaxed bg-red-50 text-red-700 border border-red-400'
+                    : message.role === 'user'
+                    ? 'px-4 py-3 rounded-[18px] rounded-br-[4px] break-words leading-relaxed bg-brand-gradient text-white'
+                    : 'message-content px-4 py-3 rounded-[18px] rounded-bl-[4px] break-words leading-relaxed bg-white text-[#333] border border-gray-200 shadow-sm'
+                }
+              >
                 {message.role === 'assistant' && !message.isError ? (
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>
                     {message.content}
@@ -113,36 +120,36 @@ const SupportChat = ({ user }) => {
                 )}
               </div>
               {message.references && (message.references.posts.length > 0 || message.references.resources.length > 0) && (
-                <div className="message-references">
+                <div className="mt-4 pt-3 border-t border-black/10">
                   {message.references.posts.length > 0 && (
-                    <div className="references-section">
-                      <strong>Referenced Posts:</strong>
+                    <div className="mb-3">
+                      <strong className="block text-xs text-gray-500 mb-2 font-semibold">Referenced Posts:</strong>
                       {message.references.posts.map((post, idx) => (
-                        <div key={idx} className="reference-item post-reference">
-                          <span className="reference-icon">💬</span>
-                          <div className="reference-content">
-                            <div className="reference-title">
+                        <div key={idx} className="flex gap-2.5 p-2.5 mb-2 last:mb-0 rounded border-l-[3px] border-l-green-500 bg-green-500/5 hover:bg-green-500/10 transition-colors">
+                          <span className="text-lg flex-shrink-0 mt-0.5">💬</span>
+                          <div className="flex-1 min-w-0">
+                            <div className="font-semibold text-xs text-gray-800 mb-1">
                               Post by {post.authorName} in {post.topicName}
                             </div>
-                            <div className="reference-text">{post.content}</div>
+                            <div className="text-xs text-gray-500 leading-snug break-words">{post.content}</div>
                           </div>
                         </div>
                       ))}
                     </div>
                   )}
                   {message.references.resources.length > 0 && (
-                    <div className="references-section">
-                      <strong>Referenced Resources:</strong>
+                    <div className="mb-3">
+                      <strong className="block text-xs text-gray-500 mb-2 font-semibold">Referenced Resources:</strong>
                       {message.references.resources.map((resource, idx) => (
-                        <div key={idx} className="reference-item resource-reference">
-                          <span className="reference-icon">🔗</span>
-                          <div className="reference-content">
-                            <div className="reference-title">
-                              <a href={resource.url} target="_blank" rel="noopener noreferrer">
+                        <div key={idx} className="flex gap-2.5 p-2.5 mb-2 last:mb-0 rounded border-l-[3px] border-l-blue-500 bg-blue-500/5 hover:bg-blue-500/10 transition-colors">
+                          <span className="text-lg flex-shrink-0 mt-0.5">🔗</span>
+                          <div className="flex-1 min-w-0">
+                            <div className="font-semibold text-xs text-gray-800 mb-1">
+                              <a href={resource.url} target="_blank" rel="noopener noreferrer" className="text-[#667eea] no-underline hover:underline">
                                 {resource.title}
                               </a>
                             </div>
-                            <div className="reference-text">{resource.description}</div>
+                            <div className="text-xs text-gray-500 leading-snug break-words">{resource.description}</div>
                           </div>
                         </div>
                       ))}
@@ -150,15 +157,15 @@ const SupportChat = ({ user }) => {
                   )}
                 </div>
               )}
-              <div className="message-timestamp">
+              <div className={`text-[11px] text-gray-400 mt-1 px-1 ${message.role === 'user' ? 'text-right' : 'text-left'}`}>
                 {new Date(message.timestamp).toLocaleTimeString()}
               </div>
             </div>
           ))
         )}
         {loading && (
-          <div className="message assistant loading">
-            <div className="message-content">
+          <div className="flex flex-col max-w-[75%] self-start animate-[fadeIn_0.3s_ease-in]">
+            <div className="message-content px-4 py-3 rounded-[18px] rounded-bl-[4px] bg-white border border-gray-200 shadow-sm">
               <span className="typing-indicator">
                 <span></span>
                 <span></span>
@@ -170,10 +177,10 @@ const SupportChat = ({ user }) => {
         <div ref={messagesEndRef} />
       </div>
 
-      <form className="chat-input-form" onSubmit={handleSend}>
+      <form className="flex p-4 bg-white border-t border-gray-200 gap-2.5" onSubmit={handleSend}>
         <input
           type="text"
-          className="chat-input"
+          className="flex-1 px-4 py-3 border border-gray-200 rounded-[24px] text-sm outline-none focus:border-[#667eea] disabled:bg-gray-100 disabled:cursor-not-allowed transition-colors"
           value={inputMessage}
           onChange={(e) => setInputMessage(e.target.value)}
           placeholder="Type your message here..."
@@ -181,7 +188,7 @@ const SupportChat = ({ user }) => {
         />
         <button
           type="submit"
-          className="send-btn"
+          className="px-6 py-3 bg-brand-gradient text-white border-0 rounded-[24px] text-sm font-semibold cursor-pointer hover:-translate-y-px transition-all disabled:bg-gray-300 disabled:cursor-not-allowed"
           disabled={!inputMessage.trim() || loading}
         >
           {loading ? 'Sending...' : 'Send'}
