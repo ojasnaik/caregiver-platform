@@ -2,6 +2,7 @@ import express from 'express';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { performRAGSearch, formatRAGContext } from '../utils/rag.js';
 import { RAG_CONFIG } from '../config/rag.config.js';
+import { compactHistory } from '../utils/chatMemory.js';
 
 const router = express.Router();
 
@@ -21,7 +22,7 @@ router.post('/', async (req, res) => {
     console.log('🚀 CHAT REQUEST RECEIVED');
     console.log('═══════════════════════════════════════════════════════════\n');
 
-    const { message } = req.body;
+    const { message, history = [] } = req.body;
 
     if (!message || typeof message !== 'string' || message.trim().length === 0) {
       return res.status(400).json({
@@ -38,7 +39,12 @@ router.post('/', async (req, res) => {
     }
 
     const userQuery = message.trim();
-    console.log(`[Chat API] Received query: "${userQuery}"`);
+    console.log(`[Chat API] Received query: "${userQuery}" (history turns: ${history.length})`);
+
+    const conversationSummary = await compactHistory(history);
+    const historyBlock = conversationSummary
+      ? `\nPREVIOUS CONVERSATION SUMMARY (for context only — the user's current question below is the priority):\n${conversationSummary}\n`
+      : '';
 
     const ragResults = await performRAGSearch(userQuery, {
       postsLimit: RAG_CONFIG.llm.postsLimit,
@@ -55,11 +61,12 @@ router.post('/', async (req, res) => {
 
 CONTEXT — retrieved and ranked from the community:
 ${ragContext}
-
+${historyBlock}
 User question: ${userQuery}
 
 Instructions:
 - Answer using ONLY the context above. Do not introduce information not present in the context.
+- The user's current question is the primary focus; use the conversation summary only for relevant background.
 - Be concise and clear — keep your response focused and easy to read.
 - Naturally reference relevant posts (e.g. "As mentioned by [author] in the [topic] discussion...") and resources (title + URL).
 - Be empathetic and supportive in tone.`;
@@ -68,21 +75,24 @@ Instructions:
 
 CONTEXT — retrieved from the community (ordered by similarity, use your judgment on relevance):
 ${ragContext}
-
+${historyBlock}
 User question: ${userQuery}
 
 Instructions:
 - Use the context above where it is genuinely relevant to the question. Skip items that are not relevant.
+- The user's current question is the primary focus; use the conversation summary only for relevant background.
 - Be concise and clear — keep your response focused and easy to read.
 - Reference relevant posts (e.g. "As mentioned by [author]...") and resources (title + URL) when applicable.
 - Be empathetic and supportive in tone.`;
     } else {
       prompt = `You are a supportive assistant for a caregiver and single parent community.
 No specific community posts or resources were found for this question.
-
+${historyBlock}
 User question: ${userQuery}
 
-Answer from your general knowledge. Be concise, clear, and empathetic.`;
+Instructions:
+- The user's current question is the primary focus; use the conversation summary only for relevant background.
+- Answer from your general knowledge. Be concise, clear, and empathetic.`;
     }
 
     console.log(`[Chat API] Sending prompt to Gemini (length: ${prompt.length} characters, context: ${ragContext ? 'YES' : 'NO'})...`);

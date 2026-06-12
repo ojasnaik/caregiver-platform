@@ -4,7 +4,12 @@ import remarkGfm from 'remark-gfm';
 import './SupportChat.css';
 
 const SupportChat = ({ user }) => {
-  const [messages, setMessages] = useState([]);
+  const [messages, setMessages] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem('caregiver_chat_history');
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
+  });
   const [inputMessage, setInputMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef(null);
@@ -15,6 +20,10 @@ const SupportChat = ({ user }) => {
 
   useEffect(() => {
     scrollToBottom();
+  }, [messages]);
+
+  useEffect(() => {
+    sessionStorage.setItem('caregiver_chat_history', JSON.stringify(messages));
   }, [messages]);
 
   const handleSend = async (e) => {
@@ -38,7 +47,12 @@ const SupportChat = ({ user }) => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ message: userMessage })
+        body: JSON.stringify({
+          message: userMessage,
+          history: messages
+            .filter(m => !m.isError)
+            .map(m => ({ role: m.role, content: m.content }))
+        })
       });
 
       const data = await response.json();
@@ -76,6 +90,7 @@ const SupportChat = ({ user }) => {
 
   const handleClear = () => {
     setMessages([]);
+    sessionStorage.removeItem('caregiver_chat_history');
   };
 
   return (
