@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { API_BASE } from '../config';
 
 const inputCls =
   'w-full px-3 py-2.5 border border-gray-300 rounded-md text-sm text-gray-800 bg-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 box-border resize-y';
@@ -19,7 +20,7 @@ const Resources = ({ user }) => {
 
   const checkAdminStatus = async () => {
     try {
-      const response = await fetch(`http://localhost:5000/api/auth/users/${user.id}`, {
+      const response = await fetch(`${API_BASE}/api/auth/users/${user.id}`, {
         headers: { 'user-id': user.id }
       });
       const data = await response.json();
@@ -31,7 +32,7 @@ const Resources = ({ user }) => {
 
   const fetchResources = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/resources');
+      const response = await fetch(`${API_BASE}/api/resources`);
       const data = await response.json();
       if (data.success) setResources(data.resources || []);
     } catch (e) {
@@ -54,7 +55,7 @@ const Resources = ({ user }) => {
     }
     try {
       setSubmitting(true);
-      const response = await fetch('http://localhost:5000/api/resources', {
+      const response = await fetch(`${API_BASE}/api/resources`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'user-id': user.id },
         body: JSON.stringify(form)

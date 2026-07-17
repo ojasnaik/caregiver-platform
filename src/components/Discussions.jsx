@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import TopicRequestForm from './TopicRequestForm';
 import UserTopicRequestList from './UserTopicRequestList';
 import AdminTopicRequestList from './AdminTopicRequestList';
+import { API_BASE } from '../config';
 
 const inputCls =
   'w-full px-3 py-2.5 border border-gray-300 rounded-md text-sm text-gray-800 bg-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 box-border resize-y';
@@ -25,7 +26,7 @@ const Discussions = ({ user }) => {
 
   const checkAdminStatus = async () => {
     try {
-      const response = await fetch(`http://localhost:5000/api/auth/users/${user.id}`, {
+      const response = await fetch(`${API_BASE}/api/auth/users/${user.id}`, {
         headers: { 'user-id': user.id }
       });
       const data = await response.json();
@@ -37,7 +38,7 @@ const Discussions = ({ user }) => {
 
   const fetchTopics = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/discussions/topics');
+      const response = await fetch(`${API_BASE}/api/discussions/topics`);
       const data = await response.json();
       if (data.success) {
         setTopics(data.topics);
@@ -52,7 +53,7 @@ const Discussions = ({ user }) => {
 
   const fetchPosts = async (topicId) => {
     try {
-      const response = await fetch(`http://localhost:5000/api/discussions/topics/${topicId}/posts`);
+      const response = await fetch(`${API_BASE}/api/discussions/topics/${topicId}/posts`);
       const data = await response.json();
       if (data.success) setPosts(data.posts);
     } catch (error) {
@@ -68,7 +69,7 @@ const Discussions = ({ user }) => {
     e.preventDefault();
     if (!newTopic.name.trim()) return;
     try {
-      const response = await fetch('http://localhost:5000/api/discussions/topics', {
+      const response = await fetch(`${API_BASE}/api/discussions/topics`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'user-id': user.id },
         body: JSON.stringify(newTopic)
@@ -91,7 +92,7 @@ const Discussions = ({ user }) => {
     e.preventDefault();
     if (!newPost.content.trim()) return;
     try {
-      const response = await fetch(`http://localhost:5000/api/discussions/topics/${selectedTopic._id}/posts`, {
+      const response = await fetch(`${API_BASE}/api/discussions/topics/${selectedTopic._id}/posts`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'user-id': user.id },
         body: JSON.stringify(newPost)
@@ -114,7 +115,7 @@ const Discussions = ({ user }) => {
       post._id === postId ? { ...post, likeCount: (post.likeCount || 0) + 1 } : post
     ));
     try {
-      const response = await fetch(`http://localhost:5000/api/discussions/posts/${postId}/like`, {
+      const response = await fetch(`${API_BASE}/api/discussions/posts/${postId}/like`, {
         method: 'POST',
         headers: { 'user-id': user.id }
       });
@@ -139,7 +140,7 @@ const Discussions = ({ user }) => {
   const handleDeleteTopic = async (topicId) => {
     if (!window.confirm('Are you sure you want to delete this topic? This will also delete all posts in this topic.')) return;
     try {
-      const response = await fetch(`http://localhost:5000/api/discussions/topics/${topicId}`, {
+      const response = await fetch(`${API_BASE}/api/discussions/topics/${topicId}`, {
         method: 'DELETE',
         headers: { 'user-id': user.id }
       });
@@ -164,7 +165,7 @@ const Discussions = ({ user }) => {
 
   const handleAddReply = async (postId, content) => {
     try {
-      const response = await fetch(`http://localhost:5000/api/discussions/posts/${postId}/replies`, {
+      const response = await fetch(`${API_BASE}/api/discussions/posts/${postId}/replies`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'user-id': user.id },
         body: JSON.stringify({ content })
@@ -191,7 +192,7 @@ const Discussions = ({ user }) => {
         : post
     ));
     try {
-      const response = await fetch(`http://localhost:5000/api/discussions/posts/${postId}/replies/${replyId}/like`, {
+      const response = await fetch(`${API_BASE}/api/discussions/posts/${postId}/replies/${replyId}/like`, {
         method: 'POST',
         headers: { 'user-id': user.id }
       });

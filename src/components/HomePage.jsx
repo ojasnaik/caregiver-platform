@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Discussions from './Discussions';
 import Resources from './Resources';
 import SupportChat from './SupportChat';
+import { API_BASE } from '../config';
 
 const TABS = [
   { id: 'home', label: 'Home' },
@@ -50,7 +51,7 @@ const HomePage = () => {
         showLocation: Boolean(parsed.showLocation)
       });
 
-      fetch(`http://localhost:5000/api/auth/users/${parsed.id}`)
+      fetch(`${API_BASE}/api/auth/users/${parsed.id}`)
         .then(res => res.json())
         .then(data => {
           if (data.success && data.user) {
@@ -79,7 +80,7 @@ const HomePage = () => {
         })
         .catch(err => console.error('Fetch self profile error:', err));
 
-      fetch(`http://localhost:5000/api/auth/users?currentUserId=${parsed.id}`)
+      fetch(`${API_BASE}/api/auth/users?currentUserId=${parsed.id}`)
         .then(res => res.json())
         .then(data => {
           if (data.success) setOtherUsers(data.users || []);
@@ -417,7 +418,7 @@ const HomePage = () => {
                     onClick={async () => {
                       try {
                         setSaving(true);
-                        const response = await fetch(`http://localhost:5000/api/auth/users/${user.id}`, {
+                        const response = await fetch(`${API_BASE}/api/auth/users/${user.id}`, {
                           method: 'PUT',
                           headers: { 'Content-Type': 'application/json' },
                           body: JSON.stringify(editProfile)

@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import UserTopicRequestList from './UserTopicRequestList';
+import { API_BASE } from '../config';
 
 const TopicRequestForm = ({ user, onRequestCreated }) => {
   const requestListRef = useRef(null);
@@ -13,7 +14,7 @@ const TopicRequestForm = ({ user, onRequestCreated }) => {
 
     setSubmitting(true);
     try {
-      const response = await fetch('http://localhost:5000/api/discussions/topic-requests', {
+      const response = await fetch(`${API_BASE}/api/discussions/topic-requests`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

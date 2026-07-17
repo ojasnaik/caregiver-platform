@@ -1,4 +1,5 @@
 import { useState, useEffect, useImperativeHandle, forwardRef } from 'react';
+import { API_BASE } from '../config';
 
 const UserTopicRequestList = forwardRef(({ user }, ref) => {
   const [requests, setRequests] = useState([]);
@@ -9,7 +10,7 @@ const UserTopicRequestList = forwardRef(({ user }, ref) => {
 
   const fetchRequests = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/discussions/topic-requests/my-requests', {
+      const response = await fetch(`${API_BASE}/api/discussions/topic-requests/my-requests`, {
         headers: {
           'user-id': user.id
         }
@@ -74,7 +75,7 @@ const UserTopicRequestList = forwardRef(({ user }, ref) => {
 
     setSubmitting(true);
     try {
-      const response = await fetch(`http://localhost:5000/api/discussions/topic-requests/${requestId}`, {
+      const response = await fetch(`${API_BASE}/api/discussions/topic-requests/${requestId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

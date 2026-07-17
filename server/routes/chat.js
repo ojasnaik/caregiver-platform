@@ -96,9 +96,13 @@ Instructions:
     }
 
     console.log(`[Chat API] Sending prompt to Gemini (length: ${prompt.length} characters, context: ${ragContext ? 'YES' : 'NO'})...`);
-    console.log('\n[Chat API] ── FULL LLM PROMPT INPUT ────────────────────────────────────────');
-    console.log(prompt);
-    console.log('[Chat API] ── END PROMPT ────────────────────────────────────────────────────\n');
+    // Full prompt/response contain user messages and community content — only dump
+    // them outside production to avoid leaking user data into hosted logs.
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('\n[Chat API] ── FULL LLM PROMPT INPUT ────────────────────────────────────────');
+      console.log(prompt);
+      console.log('[Chat API] ── END PROMPT ────────────────────────────────────────────────────\n');
+    }
 
     const model = getGeminiModel();
     const result = await model.generateContent(prompt);
@@ -106,9 +110,11 @@ Instructions:
     const text = response.text();
 
     console.log(`[Chat API] Received response from Gemini (length: ${text.length} characters)`);
-    console.log('\n[Chat API] ── FULL LLM RESPONSE OUTPUT ─────────────────────────────────────');
-    console.log(text);
-    console.log('[Chat API] ── END RESPONSE ──────────────────────────────────────────────────\n');
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('\n[Chat API] ── FULL LLM RESPONSE OUTPUT ─────────────────────────────────────');
+      console.log(text);
+      console.log('[Chat API] ── END RESPONSE ──────────────────────────────────────────────────\n');
+    }
 
     const references = {
       posts: ragResults.posts.map(post => ({

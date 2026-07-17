@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { API_BASE } from '../config';
 
 const AdminTopicRequestList = ({ user, onRequestProcessed }) => {
   const [requests, setRequests] = useState([]);
@@ -11,7 +12,7 @@ const AdminTopicRequestList = ({ user, onRequestProcessed }) => {
 
   const fetchPendingRequests = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/discussions/topic-requests/pending', {
+      const response = await fetch(`${API_BASE}/api/discussions/topic-requests/pending`, {
         headers: {
           'user-id': user.id
         }
@@ -34,7 +35,7 @@ const AdminTopicRequestList = ({ user, onRequestProcessed }) => {
   const handleApprove = async (requestId) => {
     setProcessing({ ...processing, [requestId]: 'approving' });
     try {
-      const response = await fetch(`http://localhost:5000/api/discussions/topic-requests/${requestId}/approve`, {
+      const response = await fetch(`${API_BASE}/api/discussions/topic-requests/${requestId}/approve`, {
         method: 'POST',
         headers: {
           'user-id': user.id
@@ -66,7 +67,7 @@ const AdminTopicRequestList = ({ user, onRequestProcessed }) => {
 
     setProcessing({ ...processing, [requestId]: 'requesting-edit' });
     try {
-      const response = await fetch(`http://localhost:5000/api/discussions/topic-requests/${requestId}/request-edit`, {
+      const response = await fetch(`${API_BASE}/api/discussions/topic-requests/${requestId}/request-edit`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -97,7 +98,7 @@ const AdminTopicRequestList = ({ user, onRequestProcessed }) => {
   const handleReject = async (requestId) => {
     setProcessing({ ...processing, [requestId]: 'rejecting' });
     try {
-      const response = await fetch(`http://localhost:5000/api/discussions/topic-requests/${requestId}/reject`, {
+      const response = await fetch(`${API_BASE}/api/discussions/topic-requests/${requestId}/reject`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

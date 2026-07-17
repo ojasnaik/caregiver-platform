@@ -1,0 +1,26 @@
+node_modules
+dist
+dist-ssr
+
+# Frontend — built and hosted on Vercel, not needed in the API image
+src
+public
+index.html
+vite.config.js
+eslint.config.js
+vercel.json
+
+# Env & secrets
+.env
+.env.*
+*.local
+
+# Tooling / docs / vcs
+.git
+.github
+.claude
+.playwright-mcp
+.vscode
+.idea
+*.md
+docs

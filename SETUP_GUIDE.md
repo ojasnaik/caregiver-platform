@@ -28,6 +28,11 @@
 3. For development, click "Allow Access from Anywhere" (0.0.0.0/0)
 4. Click "Confirm"
 
+> **Production note:** Most backend hosts use rotating egress IPs, so `0.0.0.0/0`
+> is often the practical choice — keep it safe by pairing it with a least-privilege
+> database user (read/write to `caregiver-app` only) and a strong password. If your
+> host offers static egress IPs, allowlist those instead.
+
 ### 5. Get Your Connection String
 1. Go to "Database" in the left sidebar
 2. Click "Connect" on your cluster
@@ -37,19 +42,33 @@
 ## Environment Setup
 
 ### 1. Create Environment File
-Create a `.env` file in the root directory with the following content:
+Copy `.env.example` to `.env` in the root directory and fill in your values:
 
 ```env
+# ── Backend ──
 # MongoDB Atlas Connection String
-# Replace <username>, <password>, and <cluster-url> with your actual MongoDB Atlas credentials
+# Replace <username>, <password>, and <cluster-url> with your actual credentials
 MONGODB_URI=mongodb+srv://<username>:<password>@<cluster-url>/caregiver-platform?retryWrites=true&w=majority
 
-# Server Port (optional, defaults to 5000)
+# Server Port (optional, defaults to 5000; most hosts inject this)
 PORT=5000
 
-# Google Gemini API Key for Support Chat
-# Get your API key from: https://makersuite.google.com/app/apikey
+# Google Gemini API Key for Support Chat — https://aistudio.google.com/apikey
 GEMINI_API_KEY=YOUR_GEMINI_API_KEY_HERE
+
+# Groq API Key for chat history compaction (optional) — https://console.groq.com/keys
+GROQ_API_KEY=YOUR_GROQ_API_KEY_HERE
+
+# Comma-separated allowed origins for CORS in production (blank = allow all)
+# e.g. CORS_ORIGINS=https://your-app.vercel.app
+CORS_ORIGINS=
+
+# "production" on the deployed backend; suppresses verbose prompt/response logging
+NODE_ENV=development
+
+# ── Frontend (Vite, build-time) ──
+# Deployed backend URL. Blank locally -> defaults to http://localhost:5000
+VITE_API_URL=
 ```
 
 **Important:** Replace `<username>`, `<password>`, and `<cluster-url>` with your actual MongoDB Atlas credentials.
@@ -82,6 +101,14 @@ npm run dev
 ### 3. Access the Application
 - Frontend: http://localhost:5173
 - Backend API: http://localhost:5000
+
+## Deployment
+
+For deploying to production (static frontend on Vercel + containerized backend on
+any host, sharing MongoDB Atlas), see the **Deployment** section in
+[README.md](README.md). In short: build the backend with the provided
+[`Dockerfile`](Dockerfile), set `VITE_API_URL` on Vercel to the backend URL, and set
+`CORS_ORIGINS` on the backend to the Vercel URL.
 
 ## User Profile Schema
 
@@ -180,8 +207,8 @@ Authenticates a user (for future implementation).
    - Or kill the process using the port: `npx kill-port 5000`
 
 3. **CORS Issues**
-   - The backend is configured to allow all origins in development
-   - For production, update CORS settings in `server/index.js`
+   - The backend allows all origins when `CORS_ORIGINS` is unset (local dev)
+   - For production, set `CORS_ORIGINS` to your frontend origin(s), e.g. `https://your-app.vercel.app` (comma-separated for multiple) — no code change needed
 
 4. **Form Validation Errors**
    - Check that all required fields are filled
